@@ -32,10 +32,16 @@ async def get_url_content(url: str , api_key: str = Depends(verify_api_key))-> C
         raise HTTPException(status_code=404, detail="URL not found")
     
     soup = BeautifulSoup(r.text, 'html.parser')
-    text = soup.get_text(separator="\n")
+    text = ""
+    if soup.find('article'):
+        
+        text = soup.find('article').get_text(separator="\n")
+    else:
+        text = soup.get_text(separator="\n")
+    
     ls:list[UrlFetch] = [ UrlFetch(url=link.get("href") , title=link.get("title")) for link in soup.find_all('a', href=True) if link.get("title")] 
     cleaned_text = " \n ".join(line.strip() for line in text.splitlines() if line.strip())
-    return Content(content=cleaned_text[500:], urls=urls_fillters(ls))
+    return Content(content=cleaned_text, urls=urls_fillters(ls))
 
 
 def urls_fillters (urls: list[UrlFetch]):
