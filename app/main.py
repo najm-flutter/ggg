@@ -2,7 +2,16 @@ from fastapi import FastAPI, HTTPException,Depends, Security
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 import httpx
+from fastapi.middleware.cors import CORSMiddleware
 from bs4 import BeautifulSoup
+origins = [
+    "https://nasser-qu.web.app/",
+    "https://nasser-qu.web.app/#",
+    
+    "https://nasser-qu.web.app/:8080",
+]
+
+app = FastAPI()
 api_key_header = APIKeyHeader(name="Authorization", auto_error=True)
 
 SECRET_API_TOKEN = "FUYTFGLijoijOJOIjOIJhGftreSREIUyIHJNBHVGCXES6GNbfghygnftbDRVGbvcFGH"
@@ -12,7 +21,14 @@ def verify_api_key(api_key: str = Security(api_key_header)):
         raise HTTPException(status_code=403, detail="Invalid API token")
     return api_key
 
-app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 class Content(BaseModel):
     content: str
     urls:list
