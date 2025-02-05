@@ -3,12 +3,12 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 import httpx
 from bs4 import BeautifulSoup
-api_key_header = APIKeyHeader(name="***", auto_error=True)
+api_key_header = APIKeyHeader(name="Authorization", auto_error=True)
 
-SECRET_API_TOKEN = "***************************************************************************"
+SECRET_API_TOKEN = "FUYTFGLijoijOJOIjOIJhGftreSREIUyIHJNBHVGCXES6GNbfghygnftbDRVGbvcFGH"
 
 def verify_api_key(api_key: str = Security(api_key_header)):
-    if api_key != f"{SECRET_API_TOKEN}":
+    if api_key != f"Bearer {SECRET_API_TOKEN}":
         raise HTTPException(status_code=403, detail="Invalid API token")
     return api_key
 
