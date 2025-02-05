@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # نسخ كود التطبيق إلى دليل العمل
-COPY . .
+COPY app/ .
 
 # تعيين المنفذ الذي سيستمع عليه التطبيق
 EXPOSE 8080
