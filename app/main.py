@@ -1,68 +1,50 @@
-from fastapi import FastAPI, HTTPException, File , UploadFile ,Header
-from typing import Annotated
-from youtube_transcript_api import YouTubeTranscriptApi
-from enum import Enum
-from pydantic import BaseModel,Field
-import os , shutil
+from fastapi import FastAPI, HTTPException,Depends, Security
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel
 import httpx
 from bs4 import BeautifulSoup
+api_key_header = APIKeyHeader(name="***", auto_error=True)
+
+SECRET_API_TOKEN = "***************************************************************************"
+
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != f"{SECRET_API_TOKEN}":
+        raise HTTPException(status_code=403, detail="Invalid API token")
+    return api_key
 
 app = FastAPI()
-class Image(BaseModel):
+class Content(BaseModel):
+    content: str
+    urls:list
+
+class UrlFetch(BaseModel):
     url: str
-    name: str
+    title: str
 
-
-class Item(BaseModel):
-    name: str
-    description: str | None = None
-    price: float
-    tax: float | None = None
-    tags: set[str] = set()
-    image: Image | None = None
-    model_config = {
-        "json_schema_extra":{
-            "examples" : [
-                {
-                    "name": "Foo",
-                    "description": "A very nice Item",
-                    "price": 35.4,
-                    "tax": 3.2,
-                    "tags": ["rock", "metal", "bar"],
-                    "image": {
-                        "url": "http://example.com/baz.jpg",
-                        "name": "The Foo live"
-                    }
-                }
-            ]
-        }
-    }
-@app.get("/get_transcript/")
-async def get_transcript(video_id:  str, language: str = "en"):
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en","ar"])
-        return {"video_id": video_id, "transcript": transcript}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/file/")
-async def read_users(f: UploadFile=File()):
-    print(os.getcwd())
-    p = os.getcwd()+"/ub"
-    paath = os.path.join(p,f.filename)
-    with open(paath,'wb')as fiil:
-        shutil.copyfileobj(f.file,fiil)
-    
-    return {"file_size": True}
-@app.get("/api/")
-async def get_url_content(url: str):
+@app.post("/api/")
+async def get_url_content(url: str , api_key: str = Depends(verify_api_key))-> Content:
     try:
      async with httpx.AsyncClient() as client:
         r = await client.get(url ,timeout=10)
     except httpx.HTTPStatusError:
-        return {"content": "Failed to fetch the URL, HTTP error."}
+        raise HTTPException(status_code=404, detail="URL not found")
+    if r.status_code != 200 or r.text == 201:
+        raise HTTPException(status_code=404, detail="URL not found")
+    
     soup = BeautifulSoup(r.text, 'html.parser')
     text = soup.get_text(separator="\n")
-    cleaned_text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
-    return {"content": cleaned_text[1500:]}
+    ls:list[UrlFetch] = [ UrlFetch(url=link.get("href") , title=link.get("title")) for link in soup.find_all('a', href=True) if link.get("title")] 
+    cleaned_text = " \n ".join(line.strip() for line in text.splitlines() if line.strip())
+    return Content(content=cleaned_text[500:], urls=urls_fillters(ls))
+
+
+def urls_fillters (urls: list[UrlFetch]):
+    url_get:list[UrlFetch] = []
+    for u in urls:
+        if u.url.endswith(".aspx"):
+          url_get.append(UrlFetch(url= "https://www.qu.edu.qa"+u.url , title=u.title)) 
+        elif u.url.startswith("mailto") or u.url.startswith("http"):
+            url_get.append(UrlFetch(url= u.url , title=u.title)) 
+        else:
+            url_get.append(UrlFetch(url= "https://www.qu.edu.qa"+u.url , title=u.title))
+    return url_get
