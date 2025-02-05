@@ -5,7 +5,7 @@ import httpx
 from fastapi.middleware.cors import CORSMiddleware
 from bs4 import BeautifulSoup
 origins = [
-    "https://nasser-qu.web.app/",
+    "https://nasser-qu.web.app",
     "https://nasser-qu.web.app/#",
     
     "https://nasser-qu.web.app/:8080",
